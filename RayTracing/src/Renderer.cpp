@@ -28,6 +28,7 @@ void Renderer::Render()
 		for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++)
 		{
 			glm::vec2 coord = { (float)x / (float)m_FinalImage->GetWidth(), (float)y / (float)m_FinalImage->GetHeight() };
+			coord = coord * 2.0f - 1.0f;
 			m_ImageData[x + y * m_FinalImage->GetWidth()] = PerPixel(coord);
 		}
 	}
@@ -37,8 +38,30 @@ void Renderer::Render()
 
 uint32_t Renderer::PerPixel(glm::vec2 coord)
 {
-	uint8_t r = (uint8_t)(coord.x * 255.0f);
-	uint8_t g = (uint8_t)(coord.y * 255.0f);
+	glm::vec3 rayOrigin(0.0f, 0.0f, 2.0f);
+	// rayDirection = glm::normalize(rayDirection);
+	glm::vec3 rayDirection(coord.x, coord.y, -1.0f);
+	glm::vec3 circleOrigin(0.0f, 0.0f, -2.0f);
+	float radius = 0.5f;
 
-	return 0xff000000 | (g << 8) | r;
+	// b.bt^2 + (2(a.b) - 2(b.c))t + a.a -2(a.c) + c.c - r^2 = 0
+	// where:
+	// a = ray origin
+	// b = ray direction
+	// c = circle origin
+	// r = circle radius
+	// t = distance to intersection
+
+	float a = glm::dot(rayDirection, rayDirection);
+	float b = 2.0f * glm::dot(rayOrigin, rayDirection) - 2.0f * glm::dot(rayDirection, circleOrigin);
+	float c = glm::dot(rayOrigin, rayOrigin) - 2.0f * glm::dot(rayOrigin, circleOrigin) - radius * radius;
+
+	// quadratic formula discriminant = b^2 - 4ac
+	float discriminant = b * b - 4 * a * c;
+
+	uint32_t color = 0xff000000;
+	if (discriminant >= 0)
+		color = 0xffff00ff;
+
+	return color;
 }
