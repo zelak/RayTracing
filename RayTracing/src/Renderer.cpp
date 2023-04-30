@@ -45,6 +45,9 @@ uint32_t Renderer::PerPixel(glm::vec2 coord)
 	//rayDirection = glm::normalize(rayDirection);
 	glm::vec3 sphereOrigin(0.0f, 0.0f, -2.0f);
 	float radius = 0.5f;
+	glm::vec3 lightSource(-1.0f, -1.0f, 1.0f);
+	lightSource = glm::normalize(lightSource);
+	uint32_t lightSourceColor = 0xFFFFFF00; //teal
 
 	// b.bt^2 + (2(a.b) - 2(b.c))t + a.a -2(a.c) + c.c - r^2 = 0
 	// where:
@@ -74,8 +77,8 @@ uint32_t Renderer::PerPixel(glm::vec2 coord)
 			(-b + glm::sqrt(discriminant)) / (2.0f * a)
 		};
 
-		// shade only the further hit points for now
-		for (int i = 1; i < 2; i++)
+		// shade only the nearer hit points for now
+		for (int i = 0; i < 1; i++)
 		{
 			// hit position
 			// using the vector formula
@@ -87,9 +90,11 @@ uint32_t Renderer::PerPixel(glm::vec2 coord)
 			glm::vec3 normal = hitPosition - sphereOrigin;
 			normal = glm::normalize(normal);
 
-			uint8_t r = (uint8_t)((normal.x * 0.5f + 0.5f) * 255.0f);
-			uint8_t g = (uint8_t)((normal.y * 0.5f + 0.5f) * 255.0f);
-			uint8_t b = (uint8_t)((normal.z * 0.5f + 0.5f) * 255.0f);
+			float shade = glm::dot(normal, -lightSource);
+
+			uint8_t r = (uint8_t)((shade * 0.5f + 0.5f) * (lightSourceColor & 0xff));
+			uint8_t g = (uint8_t)((shade * 0.5f + 0.5f) * ((lightSourceColor >> 8) & 0xff));
+			uint8_t b = (uint8_t)((shade * 0.5f + 0.5f) * ((lightSourceColor >> 16) & 0xff));
 
 			color = 0xff000000 + (b << 16) + (g << 8) + r;
 		}
