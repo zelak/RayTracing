@@ -43,32 +43,57 @@ uint32_t Renderer::PerPixel(glm::vec2 coord)
 	glm::vec3 rayOrigin(0.0f, 0.0f, 2.0f);
 	glm::vec3 rayDirection(coord.x, coord.y, -1.0f);
 	//rayDirection = glm::normalize(rayDirection);
-	glm::vec3 circleOrigin(0.0f, 0.0f, -2.0f);
+	glm::vec3 sphereOrigin(0.0f, 0.0f, -2.0f);
 	float radius = 0.5f;
 
 	// b.bt^2 + (2(a.b) - 2(b.c))t + a.a -2(a.c) + c.c - r^2 = 0
 	// where:
 	// a = ray origin
 	// b = ray direction
-	// c = circle origin
-	// r = circle radius
+	// c = sphere origin
+	// r = sphere radius
 	// t = distance to intersection
 
 	float a = glm::dot(rayDirection, rayDirection);
-	float b = 2.0f * glm::dot(rayOrigin, rayDirection) - 2.0f * glm::dot(rayDirection, circleOrigin);
-	float c = glm::dot(rayOrigin, rayOrigin) - 2.0f * glm::dot(rayOrigin, circleOrigin) - radius * radius;
+	float b = 2.0f * glm::dot(rayOrigin, rayDirection) - 2.0f * glm::dot(rayDirection, sphereOrigin);
+	float c = glm::dot(rayOrigin, rayOrigin) - 2.0f * glm::dot(rayOrigin, sphereOrigin) - radius * radius;
 
 	// quadratic formula discriminant = b^2 - 4ac
 	float discriminant = b * b - 4.0f * a * c;
 
-	// quadratic formula
-	// t = (-b +- sqr(discriminant))/2a
-
-	
-
 	uint32_t color = 0xff000000;
+
 	if (discriminant >= 0)
-		color = 0xffff00ff;
+	{
+		// quadratic formula
+		// t = (-b +- sqrt(discriminant))/2a
+		// where t is the distance between the rayOrigin and
+		// the point the ray hits the sphere.
+		float t[] = {
+			(-b - glm::sqrt(discriminant)) / (2.0f * a),
+			(-b + glm::sqrt(discriminant)) / (2.0f * a)
+		};
+
+		// shade only the further hit points for now
+		for (int i = 1; i < 2; i++)
+		{
+			// hit position
+			// using the vector formula
+			// hitPosition = rayOrigin + rayDirection * length
+			glm::vec3 hitPosition = rayOrigin + rayDirection * t[i];
+
+			// normal
+			// normal = hitPosition - sphereOrigin
+			glm::vec3 normal = hitPosition - sphereOrigin;
+			normal = glm::normalize(normal);
+
+			uint8_t r = (uint8_t)((normal.x * 0.5f + 0.5f) * 255.0f);
+			uint8_t g = (uint8_t)((normal.y * 0.5f + 0.5f) * 255.0f);
+			uint8_t b = (uint8_t)((normal.z * 0.5f + 0.5f) * 255.0f);
+
+			color = 0xff000000 + (b << 16) + (g << 8) + r;
+		}
+	}
 
 	return color;
 }
