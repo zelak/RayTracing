@@ -3,6 +3,20 @@
 
 #include "Walnut/Random.h"
 
+namespace Utils {
+
+	static uint32_t ConvertToRGBA(const glm::vec4& color)
+	{
+		uint8_t r = (uint8_t)(color.r * 255.0f);
+		uint8_t g = (uint8_t)(color.g * 255.0f);
+		uint8_t b = (uint8_t)(color.b * 255.0f);
+		uint8_t a = (uint8_t)(color.a * 255.0f);
+
+		uint32_t result = (a << 24) | (b << 16) | (g << 8) | r;
+		return result;
+	}
+}
+
 void Renderer::OnResize(uint32_t width, uint32_t height)
 {
 	if (m_FinalImage)
@@ -31,14 +45,16 @@ void Renderer::Render()
 			coord = coord * 2.0f - 1.0f; // (-1,-1) to (1,1) coordinate space
 			float aspectRatio = (float)m_FinalImage->GetWidth() / (float)m_FinalImage->GetHeight();
 			coord.x = coord.x * aspectRatio;
-			m_ImageData[x + y * m_FinalImage->GetWidth()] = PerPixel(coord);
+			glm::vec4 color = PerPixel(coord);
+			color = glm::clamp(color, glm::vec4(0.0f), glm::vec4(1.0f));
+			m_ImageData[x + y * m_FinalImage->GetWidth()] = Utils::ConvertToRGBA(color);
 		}
 	}
 
 	m_FinalImage->SetData(m_ImageData);
 }
 
-uint32_t Renderer::PerPixel(glm::vec2 coord)
+glm::vec4 Renderer::PerPixel(glm::vec2 coord)
 {
 	glm::vec3 rayOrigin(0.0f, 0.0f, 2.0f);
 	glm::vec3 rayDirection(coord.x, coord.y, -1.0f);
@@ -47,7 +63,7 @@ uint32_t Renderer::PerPixel(glm::vec2 coord)
 	float radius = 0.5f;
 	glm::vec3 lightSource(-1.0f, -1.0f, 1.0f);
 	lightSource = glm::normalize(lightSource);
-	uint32_t lightSourceColor = 0xFFFFFF00; //teal
+	glm::vec4 lightSourceColor(0.0f, 1.0f, 1.0f, 1.0f); // RGBA teal
 
 	// b.bt^2 + (2(a.b) - 2(b.c))t + a.a -2(a.c) + c.c - r^2 = 0
 	// where:
@@ -64,7 +80,7 @@ uint32_t Renderer::PerPixel(glm::vec2 coord)
 	// quadratic formula discriminant = b^2 - 4ac
 	float discriminant = b * b - 4.0f * a * c;
 
-	uint32_t color = 0xff000000;
+	glm::vec4 color = glm::vec4(0, 0, 0, 1);
 
 	if (discriminant >= 0)
 	{
@@ -90,13 +106,11 @@ uint32_t Renderer::PerPixel(glm::vec2 coord)
 			glm::vec3 normal = hitPosition - sphereOrigin;
 			normal = glm::normalize(normal);
 
-			float shade = glm::dot(normal, -lightSource);
+			float intensity = glm::dot(normal, -lightSource);
+			intensity = intensity * 0.5f + 0.5f;
 
-			uint8_t r = (uint8_t)((shade * 0.5f + 0.5f) * (lightSourceColor & 0xff));
-			uint8_t g = (uint8_t)((shade * 0.5f + 0.5f) * ((lightSourceColor >> 8) & 0xff));
-			uint8_t b = (uint8_t)((shade * 0.5f + 0.5f) * ((lightSourceColor >> 16) & 0xff));
-
-			color = 0xff000000 + (b << 16) + (g << 8) + r;
+			color = lightSourceColor * intensity;
+			color.a = 1.0f;
 		}
 	}
 
