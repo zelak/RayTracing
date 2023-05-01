@@ -61,6 +61,7 @@ glm::vec4 Renderer::PerPixel(glm::vec2 coord)
 	//rayDirection = glm::normalize(rayDirection);
 	glm::vec3 sphereOrigin(0.0f, 0.0f, -2.0f);
 	float radius = 0.5f;
+	glm::vec4 sphereColor(1.0f, 1.0f, 0.0f, 1.0f); // RGBA yellow
 	glm::vec3 lightSource(-1.0f, -1.0f, 1.0f);
 	lightSource = glm::normalize(lightSource);
 	glm::vec4 lightSourceColor(0.0f, 1.0f, 1.0f, 1.0f); // RGBA teal
@@ -82,37 +83,38 @@ glm::vec4 Renderer::PerPixel(glm::vec2 coord)
 
 	glm::vec4 color = glm::vec4(0, 0, 0, 1);
 
-	if (discriminant >= 0)
+	if (discriminant < 0)
+		return color;
+
+	// quadratic formula
+	// t = (-b +- sqrt(discriminant))/2a
+	// where t is the distance between the rayOrigin and
+	// the point the ray hits the sphere.
+	float t[] = {
+		(-b - glm::sqrt(discriminant)) / (2.0f * a),
+		(-b + glm::sqrt(discriminant)) / (2.0f * a)
+	};
+
+	// shade only the nearer hit points for now
+	for (int i = 0; i < 1; i++)
 	{
-		// quadratic formula
-		// t = (-b +- sqrt(discriminant))/2a
-		// where t is the distance between the rayOrigin and
-		// the point the ray hits the sphere.
-		float t[] = {
-			(-b - glm::sqrt(discriminant)) / (2.0f * a),
-			(-b + glm::sqrt(discriminant)) / (2.0f * a)
-		};
+		// hit position
+		// using the vector formula
+		// hitPosition = rayOrigin + rayDirection * length
+		glm::vec3 hitPosition = rayOrigin + rayDirection * t[i];
 
-		// shade only the nearer hit points for now
-		for (int i = 0; i < 1; i++)
-		{
-			// hit position
-			// using the vector formula
-			// hitPosition = rayOrigin + rayDirection * length
-			glm::vec3 hitPosition = rayOrigin + rayDirection * t[i];
+		// normal
+		// normal = hitPosition - sphereOrigin
+		glm::vec3 normal = hitPosition - sphereOrigin;
+		normal = glm::normalize(normal);
 
-			// normal
-			// normal = hitPosition - sphereOrigin
-			glm::vec3 normal = hitPosition - sphereOrigin;
-			normal = glm::normalize(normal);
+		float intensity = glm::dot(normal, -lightSource);
+		intensity = intensity * 0.5f + 0.5f;
 
-			float intensity = glm::dot(normal, -lightSource);
-			intensity = intensity * 0.5f + 0.5f;
-
-			color = lightSourceColor * intensity;
-			color.a = 1.0f;
-		}
+		color = (lightSourceColor * intensity) * sphereColor;
+		color.a = 1.0f;
 	}
+
 
 	return color;
 }
